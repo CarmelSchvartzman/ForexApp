@@ -27,6 +27,15 @@ app = Flask(__name__)
 
 import logging
 
+# In your app.py or equivalent file
+import os
+
+# ... your app setup ...
+
+if __name__ == '__main__':
+    port = int(os.environ.get("PORT", 5000)) # Use environment PORT or default
+    app.run(host='0.0.0.0', port=port)
+
 
 
 def get_forex_data(symbol="EURUSD=X", period="180d", interval="1d"):
