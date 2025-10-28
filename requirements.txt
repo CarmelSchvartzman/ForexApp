@@ -4,3 +4,4 @@ ta
 plotly
 pandas
 gunicorn
+os
