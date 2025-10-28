@@ -1,0 +1,12 @@
+ESTA APP ES UN FOREX PREDICTOR:esta deployed in RENDER : https://fxpredictor.onrender.com/(para hacer LOGIN en Render > usar GITHUB account)https://dashboard.render.com
+PARA UPDATE LA APP:1.cambiar el code2.subirlo a GITHUB (en el folder donde esta el PY file): 
+git add forex_flask.py 
+git commit -m "1.0.0.0" 
+git push -u origin main
+
+NOMBRE DEL FILE : forex_flask.py
+# Como usarla?:
+# pip install flask yfinance ta plotly xlsxwriter
+# python forex_flask.py
+# Como browse?:
+# Running on http://127.0.0.1:5000
