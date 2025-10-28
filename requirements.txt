@@ -1,0 +1,6 @@
+Flask
+yfinance
+ta
+plotly
+pandas
+gunicorn
