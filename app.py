@@ -1,6 +1,19 @@
+# ESTA APP ES UN FOREX PREDICTOR:esta deployed in RENDER : https://fxpredictor.onrender.com/
+# (para hacer LOGIN en Render > usar GITHUB account)https://dashboard.render.com
+# PARA UPDATE LA APP:
+# 1.cambiar el code
+# 2.subirlo a GITHUB (en el folder donde esta el PY file): 
+# git add app.py 
+# git commit -m "1.0.0.0" 
+# git push -u origin main
+
+
+
 # Como usarla?:
+# cd C:\Users\carmel.shvartzman\AWS_Q\STOCKSMARKET\FOREX_FLASK
 # pip install flask yfinance ta plotly xlsxwriter
-# python forex_flask.py
+# python app.py
+# python app.py
 
 
 # Como browse?:
@@ -26,14 +39,27 @@ app = Flask(__name__)
 
 
 import logging
-# In your app.py or equivalent file
+
 import os
 
-# ... your app setup ...
+"""
+# ... app setup ...
+# --- Route Handler for the Root Path (/) ---
+@app.route('/')
+def home():
+    # This function will run when a user visits http://127.0.0.1:5000/
+    return "Welcome to the Forex Flask Application!"
+    
+    
+    
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000)) # Use environment PORT or default
     app.run(host='0.0.0.0', port=port)
+"""
+
+
+
 
 
 def get_forex_data(symbol="EURUSD=X", period="180d", interval="1d"):
@@ -73,10 +99,27 @@ def get_forex_data(symbol="EURUSD=X", period="180d", interval="1d"):
         df["STOCH_K"] = stoch.stoch().squeeze()
         df["STOCH_D"] = stoch.stoch_signal().squeeze()
 
-        # On-Balance Volume (OBV)
-        df["OBV"] = ta.volume.OnBalanceVolumeIndicator(
-            close=df["Close"], volume=df["Volume"]
-        ).on_balance_volume().squeeze()
+        # --- On-Balance Volume (OBV) ---
+        if "Volume" not in df.columns or df["Volume"].isna().all() or (df["Volume"] == 0).all():
+            # Synthetic volume for forex (since Yahoo often provides no volume)
+            df["Volume"] = (df["High"] - df["Low"]).abs() * 1000  # scale up for visibility
+            synthetic_volume = True
+        else:
+            synthetic_volume = False
+
+        # Compute OBV using ta library
+        obv_indicator = ta.volume.OnBalanceVolumeIndicator(close=df["Close"], volume=df["Volume"])
+        df["OBV"] = obv_indicator.on_balance_volume().squeeze()
+
+        # Normalize for stable chart display
+        df["OBV_NORM"] = df["OBV"] / df["OBV"].abs().max()
+
+        # Optional moving average signal
+        df["OBV_SIGNAL"] = df["OBV_NORM"].rolling(window=10).mean()
+
+        # Label for chart title
+        df.attrs["synthetic_volume"] = synthetic_volume
+
 
         # Ichimoku Cloud
         ichimoku = ta.trend.IchimokuIndicator(
@@ -165,7 +208,11 @@ def generate_stochastic_chart(df):
     fig.update_layout(
         title="Stochastic Oscillator",
         xaxis_title="Date", yaxis_title="Value",
-        template="plotly_white", height=400
+        template="plotly_white", #height=400,
+        autosize=True,
+        height=None,  # allow browser to decide height
+        width=1300,
+        margin=dict(l=20, r=20, t=40, b=40)
     )
     return pyo.plot(fig, output_type="div")
 
@@ -177,7 +224,11 @@ def generate_obv_chart(df):
     fig.update_layout(
         title="On-Balance Volume (OBV)",
         xaxis_title="Date", yaxis_title="OBV",
-        template="plotly_white", height=400
+        template="plotly_white", #height=400,
+        autosize=True,
+        height=None,  # allow browser to decide height
+        width=1300,
+        margin=dict(l=20, r=20, t=40, b=40)
     )
     return pyo.plot(fig, output_type="div")
 
@@ -242,7 +293,7 @@ def index():
     <!DOCTYPE html>
     <html>
     <head>
-        <title>Forex Dashboard - EUR/USD</title>
+        <title>📈Forex Predictor - EUR/USD</title>
         <style>
             body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f9; }
             h1 { color: #333; }
@@ -250,7 +301,7 @@ def index():
             .tabs button { background: #ccc; float: left; border: none; outline: none; cursor: pointer; padding: 12px 20px; transition: 0.3s; }
             .tabs button:hover { background: #bbb; }
             .tabs button.active { background: #999; color: white; }
-            .tabcontent { display: none; padding: 20px; background: white; }
+            .tabcontent { display: none; padding: 20px; background: white; width:100%; height:100%; min-height:600px;}
             table { border-collapse: collapse; width: 90%; margin-top: 20px; background: white; }
             th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
             th { background: #eee; }
@@ -292,18 +343,22 @@ def index():
             {{ price_chart|safe }}
         </div>
 
-        <div id="Stochastic" class="tabcontent">
+        <div id="Stochastic" class="tabcontent" >
          <h3 style="color: {{ trend_summary.color }}; font-weight: bold;">
         Prediction : {{ trend_summary.text }}
         </h3>
+        <div style="width:100%; height:100%; min-height:600px;">
             {{ stochastic_chart|safe }}
+          </div>  
         </div>
 
         <div id="OBV" class="tabcontent">
          <h3 style="color: {{ trend_summary.color }}; font-weight: bold;">
         Prediction : {{ trend_summary.text }}
         </h3>
+        <div style="width:100%; height:100%; min-height:600px;">
             {{ obv_chart|safe }}
+            </div>
         </div>
 
         <div id="Signals" class="tabcontent">
@@ -327,7 +382,9 @@ def index():
             <a href="/download/excel"><button class="download-btn">⬇ Download Excel</button></a>
         </div>
        <h4 style="color: {{ trend_summary.color }}; font-weight: bold;">
-        Powered by CarmelSoft 
+         
+        <p>© 2022 | Powered by <a href="http://carmelsoft.netlify.app" target="blank"
+              title="carmelsoft">carmelsoft</a></p>
         </h4>
     </body>
     </html>
@@ -380,4 +437,7 @@ def download_excel():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    #app.run(debug=True)   
+    
+    port = int(os.environ.get("PORT", 5000)) # Use environment PORT or default
+    app.run(host='0.0.0.0', port=port)
